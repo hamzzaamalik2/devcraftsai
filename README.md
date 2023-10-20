@@ -1,6 +1,6 @@
-# Application Installation README Guide
+# Application Installation README File
 
-This README provides a simple guide on how to set up and run this Node.js application.
+This README provides a guide on how to set up and run this Node.js application. This application requires the use of an API key from OpenAI to function properly.
 
 ## Prerequisites
 
@@ -30,6 +30,20 @@ Before you get started, ensure that you have the following prerequisites install
 
 This will download and install all the necessary dependencies specified in the `package.json` file.
 
+## Configuration
+
+To configure this application, you need to set up an environment variable for your OpenAI API key. Follow these steps:
+
+1. Create a file named `.env` in the root directory of the application if it doesn't already exist.
+
+2. Inside the `.env` file, add the following line, replacing `"xyz"` with your actual OpenAI API key:
+
+   ```env
+   OPENAI_API_KEY="your-api-key-here"
+   ```
+
+   This environment variable is used to authenticate with the OpenAI API.
+
 ## Running the Application
 
 To start the Node.js application, use the following command:
@@ -38,21 +52,11 @@ To start the Node.js application, use the following command:
 npm start
 ```
 
-This command will launch the application, and you should see relevant output or messages in your terminal indicating that the application is running.
+This command will launch the application, and it will use the API key you provided in the `.env` file to interact with the OpenAI API.
 
-## Accessing the Application
+## Usage
 
-Once the application is running, you can access it in your web browser by navigating to the following URL:
-
-```
-http://localhost:7003
-```
-
-The port number may vary based on your configuration.
-
-## Configuration (Optional)
-
-If the application requires configuration, you should refer to the documentation or source code to customize any settings, such as environment variables, database connections, or other parameters.
+Once the application is running, you can interact with it via its API or web interface. Please refer to the project's documentation or source code for specific usage instructions and endpoints.
 
 ## Troubleshooting
 
