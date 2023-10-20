@@ -2,6 +2,10 @@
 
 This README provides a guide on how to set up and run this Node.js application. This application requires the use of an API key from OpenAI to function properly.
 
+## Usage
+This application generates Cypress scripts for test automation by filling out web forms. You can access the application via its web interface. Please refer to the project's documentation or source code for specific usage instructions and endpoints.
+
+
 ## Prerequisites
 
 Before you get started, ensure that you have the following prerequisites installed on your system:
