@@ -6,7 +6,7 @@ describe("Add Event", () => {
     cy.get("input[name='name']").type("DEMO");
     
     // Step 2: type email is bilal@gmail.com
-    cy.get("input[name='email']").type("bilal@gmail.com");
+    cy.get("input[name='email']").type("xyz@gmail.com");
     
     // Step 3: Date Picker 2023-10-18 Start Date
     cy.get("input[name='startdate']").type("2023-10-18");
