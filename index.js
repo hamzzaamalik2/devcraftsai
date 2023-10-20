@@ -32,7 +32,7 @@ app.use(bodyParser.urlencoded({
 app.use(cors());
 
 //CONNECT WITH DB
-let dev_db_url = process.env.BASE_URL;
+let dev_db_url = "mongodb+srv://admin:admin@cluster0.xisronh.mongodb.net/TestCasesOpenAI";
 const mongoDB = dev_db_url;
 mongoose.connect(mongoDB, {useNewUrlParser : true, useUnifiedTopology: true });
 mongoose.Promise = global.Promise;
