@@ -3,8 +3,15 @@
 This README provides a guide on how to set up and run this Node.js application. This application requires the use of an API key from OpenAI to function properly.
 
 ## Usage
-This application generates Cypress scripts for test automation by filling out web forms. You can access the application via its web interface. Please refer to the project's documentation or source code for specific usage instructions and endpoints.
 
+This application generates Cypress scripts for test automation by filling out web forms. You can access the application via its web interface.
+
+- Start the application using `npm start`.
+- Open a web browser and navigate to the application's URL (usually `http://localhost:7003`).
+- You will find a user-friendly web interface that allows you to specify test automation scenarios by filling out web forms.
+- Once you have defined your test scenario, the application will generate Cypress scripts that you can use for test automation.
+
+Please refer to the project's documentation or source code for specific details and options available in the web interface.
 
 ## Prerequisites
 
