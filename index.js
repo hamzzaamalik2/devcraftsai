@@ -74,12 +74,14 @@ app.get('*', (req, res)=>{
 
 // Define a route to receive pull request events
 app.post('/webhook', async (req, res) => {
+  console.log("Call enter")
   const event = req.headers['x-github-event'];
   const signature = req.headers['x-hub-signature-256']; // GitHub's signature header
   const payload = req.body;
 
   if (signature && verifyGitHubSignature(GITHUB_SECRET, signature, JSON.stringify(req.body))) {
     if (event === 'pull_request' && payload.action === 'opened') {
+      console.log("Call enter 2")
       // Extract pull request data
       const pr = payload.pull_request;
       const prNumber = pr.number;
