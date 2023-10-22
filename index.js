@@ -10,6 +10,10 @@ const app = express();
 var bodyParser = require('body-parser');
 var cors = require('cors');
 var testCases = require('./router/testCases');
+const axios = require('axios');
+const crypto = require('crypto');
+const { Octokit } = require('@octokit/rest');
+
 
 const { Configuration, OpenAIApi } = require("openai");
 const configuration = new Configuration({
@@ -30,6 +34,16 @@ app.use(bodyParser.urlencoded({
   parameterLimit:50000
 }));
 app.use(cors());
+
+
+const GPT3_API_KEY = 'sk-5mel8hcDAmQDAisM79fuT3BlbkFJKH';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_SECRET = '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';
+
+// Set up the GitHub API client
+const octokit = new Octokit({ auth: GITHUB_TOKEN });
+
+
 
 //CONNECT WITH DB
 let dev_db_url = "mongodb+srv://admin:admin@cluster0.xisronh.mongodb.net/TestCasesOpenAI";
@@ -57,5 +71,81 @@ app.set('view engine', 'html');
 app.get('*', (req, res)=>{
   res.sendFile(path.join(__dirname, '/views/dist/index.html'))
 });
+
+// Define a route to receive pull request events
+app.post('/webhook', async (req, res) => {
+  const event = req.headers['x-github-event'];
+  const signature = req.headers['x-hub-signature-256']; // GitHub's signature header
+  const payload = req.body;
+
+  console.log(payload)
+  if (signature && verifyGitHubSignature(GITHUB_SECRET, signature, JSON.stringify(req.body))) {
+    console.log(event)
+    if (event === 'pull_request' && payload.action === 'opened') {
+      // Extract pull request data
+      const pr = payload.pull_request;
+      const prNumber = pr.number;
+      const repo = pr.base.repo.full_name; 
+      const diffUrl = pr.diff_url; 
+      const response = await axios.get(diffUrl);
+
+      if (response.status === 200) {
+        const codeToReview = response.data; // This will contain the code changes
+        // Customize prompts or fetch from customer settings
+        const prompts = ['Review this code:', 'What can be improved?', 'Any potential issues?'];
+  
+        // Generate GPT-3 comments
+        const gptComments = await generateGPT3Comments(codeToReview, prompts);
+  
+        // Post comments to the pull request
+        await postCommentsToPR(repo, prNumber, gptComments);
+  
+        res.status(200).end();
+      } else {
+        console.error('Failed to fetch code changes from the pull request');
+      }
+    } else {
+      res.status(400).end();
+    }
+  } else {
+    res.status(403).end(); // Return forbidden status if the signature is invalid
+  }
+});
+
+// Function to verify the GitHub webhook signature 
+function verifyGitHubSignature(secret, signature, payload) {
+  const hmac = crypto.createHmac('sha256', secret);
+  const digest = 'sha256=' + hmac.update(payload).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(signature));
+}
+// Function to generate comments using GPT-3
+async function generateGPT3Comments(code, prompts) {
+  // Construct the request to GPT-3
+  const requestBody = {
+    prompt: `${code}\n${prompts.join('\n')}`, // Include the code for review in the prompt
+    max_tokens: 100, // Adjust as needed
+  };
+
+  // Make a request to the GPT-3 API
+  const response = await axios.post('https://api.openai.com/v1/engines/text-davinci-002/completions', requestBody, {
+    headers: {
+      'Authorization': `Bearer ${GPT3_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  return response.data.choices[0].text.trim();
+}
+
+// Function to post comments to the pull request
+async function postCommentsToPR(repo, prNumber, comments) {
+  await octokit.issues.createComment({
+    owner: repo.split('/')[0],
+    repo: repo.split('/')[1],
+    issue_number: prNumber,
+    body: comments,
+  });
+}
+
 //HOW DO WE START LISTENING
 app.listen(process.env.PORT  || 7003);
