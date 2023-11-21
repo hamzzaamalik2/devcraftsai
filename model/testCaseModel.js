@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const testCaseSchema = new mongoose.Schema({
+    userID:{type: String},
     testName: {type: String},
     testURL: {type: String},
     testTodo: {type: String},

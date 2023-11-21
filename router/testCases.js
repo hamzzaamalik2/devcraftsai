@@ -1,9 +1,10 @@
 const dotenv = require('dotenv');
 const express = require('express');
 var bodyParser = require('body-parser');
-const mongoose = require('mongoose');
-const testcase = require('../model/testCaseModel');
+const mongoose = require('mongoose'); 
+const testcase = require('../model/testCaseModel'); 
 const puppeteer = require('puppeteer');
+const userModel = require('../model/userModel');
 const { Configuration, OpenAIApi } = require("openai");
 dotenv.config()
 const app = express();  
@@ -15,6 +16,13 @@ app.use(bodyParser.urlencoded({
   extended: true,
   parameterLimit:50000
 }));
+const configuration = new Configuration({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+  const openai = new OpenAIApi(configuration);
+
+const router = express.Router();
+
 const args = [
   '--aggressive-cache-discard',
   '--disable-cache',
@@ -38,12 +46,73 @@ const options = {
   headless: true,
   ignoreHTTPSErrors: true
 };
-const configuration = new Configuration({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-  const openai = new OpenAIApi(configuration);
 
-const router = express.Router();
+
+
+
+
+router.get('/cloneTestCase/:id',async  (req, res, next) => {
+  
+  const testId = req.params.id;
+  const retrievedData  = await testcase.findOne({ _id: testId });
+  // Check if data is found
+  if (retrievedData) {
+    const plainData = retrievedData.toObject();
+    delete plainData._id; 
+    const newData = await testcase.create(plainData); 
+
+    // Optionally, you can send a response to indicate success
+    res.status(200).json({ message: 'Data inserted successfully', data: newData });
+  } else {
+    // Handle the case where no data is found
+    res.status(404).json({ message: 'Data not found' });
+  }
+
+});
+///////////////////////////////////
+//////**Get tour_Guide detail *////
+//////////////////////////////////
+
+router.get('/tour_guide/:id', async (req, res)=> {
+  
+  try{
+    const userId = req.params.id;
+    
+    const data = await userModel.find({ userID: userId });
+    res.send({status:200, data: data})
+
+  }catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+
+});
+
+
+router.post('/Updatetour_guideById/:id', async (req, res)=> {
+  
+  try{
+    const userId = req.params.id;
+    
+    const updatedUser = await userModel.findOneAndUpdate(
+      { userID: userId },
+      { $set: { tour_guide: true } },
+      { new: true }
+    );
+
+    if (updatedUser) {
+      res.send({ status: 200, data: updatedUser });
+    } else {
+      res.status(404).send({ status: 404, error: 'User not found' });
+    }
+
+  }catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+
+});
+
 
 ///////////////////////////////
 //////**GenerateTeseCase *////
@@ -79,10 +148,11 @@ router.post('/generateTestCase',async  (req, res, next) => {
     
     let getHTML = new Promise(async function(myResolve, myReject) {
       try {
-        if(!req.body.authorization){
+        if(req.body.authorization){
           BodyHtmlData = await lunchbrowser(req.body.testURL)
           Steps = "write a code for cypress script the "+loginSteps+" after this goto this url "+req.body.testURL+" main purpose is "+req.body.testTodo+" into the website  "+req.body.testURL+" and steps are "+mainFollow+" and elements of this websites are Input Elements: " +BodyHtmlData.inputElementsJSON+ " Button Elements: " +BodyHtmlData.buttonElementsJSON+" anchor Elements: " +BodyHtmlData.anchorElementsJSON+" Textarea Elements: " +BodyHtmlData.textareaElementsJSON+ " select Elements: "+BodyHtmlData.selectElementsJSON+" radio Elements: " +BodyHtmlData.radioElements+" ,and don't use Cypress.moment."
         }else{
+          BodyHtmlData = await lunchbrowser(req.body.testURL)
           Steps = "write a code for cypress script the and main purpose is "+req.body.testTodo+" into the website  "+req.body.testURL+" and steps are "+mainFollow+" and elements of this websites are Input Elements: " +BodyHtmlData.inputElementsJSON+ " Button Elements: " +BodyHtmlData.buttonElementsJSON+" anchor Elements: " +BodyHtmlData.anchorElementsJSON+" Textarea Elements: " +BodyHtmlData.textareaElementsJSON+ " select Elements: "+BodyHtmlData.selectElementsJSON+" radio Elements: " +BodyHtmlData.radioElements+" ,and don't use Cypress.moment."
           
         }
@@ -97,8 +167,12 @@ router.post('/generateTestCase',async  (req, res, next) => {
     getHTML.then(
       async function(value) {  
         const completion =  await openai.createChatCompletion({
-          model: "gpt-3.5-turbo",
-          messages: [{role: "user", content: Steps+value}],
+          model: "gpt-4",
+          messages: [
+            { role: "system", content: "You are the SQA Tester writing the code in cypress framework" },
+            {role: "user", content: Steps+value}
+          ],
+          temperature: 0.0,
         });
         var result = completion.data.choices[0].message.content;
         const codeBlockRegex = /```([\s\S]+?)```/;
@@ -124,6 +198,7 @@ router.post('/generateTestCase',async  (req, res, next) => {
         }
   
         var testcase_detail = new testcase({
+          userID: req.body.userId,
           testName: req.body.testName,
           testURL: req.body.testURL,
           testTodo: req.body.testTodo,
@@ -171,8 +246,6 @@ router.post('/compileTestCase', async (req, res, next) => {
         testcaseData = await testcase.find({_id: req.body._id});
         testcaseData = testcaseData[0]
   
-  
-        console.log("HELLOOOOO ::::::")
         let BodyHtmlData = await lunchbrowser(testcaseData.testURL)
         console.log(BodyHtmlData)
   
@@ -180,9 +253,13 @@ router.post('/compileTestCase', async (req, res, next) => {
         console.log(Steps)
         // myResolve(Steps);
   
-        const completion2 =  await openai.createChatCompletion({
-          model: "gpt-3.5-turbo",
-          messages: [{role: "user", content: Steps}],
+        const completion2 =  await openai.createChatCompletion({ 
+          model: "gpt-4",
+          messages: [
+            { role: "system", content: "You are the SQA Tester writing the code in cypress framework" },
+            {role: "user", content: Steps}
+          ], 
+          temperature: 0.0,
         });
         var result2 = completion2.data.choices[0].message.content;
         const codeBlockRegex = /```([\s\S]+?)```/;
@@ -263,20 +340,18 @@ router.post('/getTestCaseById/:id', async(req, res, next) => {
 //////**getAllTestCases */////
 /////////////////////////////
 
-router.get('/getAllTestCases', async (req, res)=> {
-  
-    try{
-      const data = await testcase.find({});
-      res.json(data);
-  
-    }catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  
-  });
 
+router.get('/getAllTestCases/:id', async (req, res) => {
+  try {
+      const userId = req.params.id;
 
+      const results = await testcase.find({ userID: userId });  
+      res.json(results);
+  } catch (error) {
+      console.error('Error fetching test cases:', error);
+      res.status(500).json({ error: 'Internal server error', message: error.message });
+  }
+});
 
 
 async function getPageDataBrowser(page,browser) {
